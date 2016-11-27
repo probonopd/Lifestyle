@@ -1,0 +1,8 @@
+# 27.145 MHz BOSE Lifestyle RC-9 (Europe) with Arduino
+
+ * Best option is to buy a garage door opener sender and try to attach it to an Arudino to replay the BOSE signals?
+ * Can I see and decode the signal in using a RTL SDR? -> YES, using Gqrx-x86_64.AppImage
+ * sudo rmmod r820t rtl2832 dvb_usb_rtl28xxu rtl2830 dvb_usb_rtl28xxu dvb_usb_v2 dvb_core then CubicSDR-0.2.0-x86_64.AppImage
+ * How can I use Arduino to generate these signals?
+  
+![gqrx_wf_20161127_153832](https://cloud.githubusercontent.com/assets/2480569/20649713/dc386ea6-b4c5-11e6-8e54-725710d34a90.png)
