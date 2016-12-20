@@ -1,5 +1,5 @@
 /*
-    Control BOSE using a 30 cm wire as antenna on GPIO_4 pin 7
+    Control BOSE using a 30 cm wire as antenna on GPIO_4 pin 7 on a Rasperry Pi 1
 
     To compile:
     gcc -Wall -O4 -o bosecontrol bosecontrol.c -std=gnu99 -lm
