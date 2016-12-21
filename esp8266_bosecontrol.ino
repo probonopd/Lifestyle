@@ -4,53 +4,69 @@
 // Can we get this to compile on esp8266/Arduino? *** NOT WORKING YET, help welcome ***
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+In file included from hardware/esp8266/esp8266/cores/esp8266/Arduino.h:38:0,
+                 from sketch/TestEspApi.ino.cpp:1:
+/home/me/Desktop/TestEspApi/TestEspApi.ino: In function 'void initI2S()':
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:32:134: error: 'rom_i2c_writeReg_Mask' was not declared in this scope
+ #define i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)  rom_i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)
+                                                                                                                                      ^
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:33:55: note: in expansion of macro 'i2c_writeReg_Mask'
+ #define i2c_writeReg_Mask_def(block, reg_add, indata) i2c_writeReg_Mask(block, block##_hostid,  reg_add,  reg_add##_msb,  reg_add##_lsb,  indata)
+                                                       ^
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:752:43: note: in expansion of macro 'i2c_writeReg_Mask_def'
+ #define I2S_CLK_ENABLE()                  i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1)
+                                           ^
+/home/me/Desktop/TestEspApi/TestEspApi.ino:152:4: note: in expansion of macro 'I2S_CLK_ENABLE'
+    I2S_CLK_ENABLE();
+    ^
+exit status 1
+Error compiling for board WeMos D1 R2 & mini.
+*/
+
 #ifdef ESP8266
 extern "C" {
 #include "user_interface.h"
+#include "i2s_reg.h"
+#include "slc_register.h"
+#include "esp8266_peri.h"
 }
 #endif
 
-int setBitPattern();
-void printBitField();
-void setBit(int bitNr, bool val);
-int  getBit(int bitNr);
-void setFrequency(enum Frequencies freq);
-void frequencyEnumToString(enum Frequencies freq, char* buf);
-
-#include "slc_register.h"
-#include <c_types.h>
-#include "pin_mux_register.h"
-#include "dmastuff.h"
-#include "io.h"
-
-#define I2SDMABUFLEN (100)    //Length of one buffer, in 32-bit words.
-
-//Bit clock @ 40MHz = 25ns
-//WS_I2S_DIV - if 1 will actually be 2.  Can't be less than 2.
-//    CLK_I2S = 80MHz / I2S_CLKM_DIV_NUM
-//    BCLK = CLK_I2S / I2S_BCK_DIV_NUM
-//    WS = BCLK/ 2 / (16 + I2S_BITS_MOD)
-//    Note that I2S_CLKM_DIV_NUM must be >5 for I2S data
-//    I2S_CLKM_DIV_NUM - 5-127
-//    I2S_BCK_DIV_NUM - 2-127
 
 // https://github.com/jokrug/espfuchs/issues/1
 // Among a lot of harmonics, you will get 5.714+3.333=9.047MHz
 // The third harmonic is (almost) the desired 27.141MHz.
 // The amplitude of this frequency however, will be much lower than the 9.047 and the 5.714. Maybe it is still strong enough. It's worth a test.
-ws_i2s_bck = 1; // defines I2S-clock of 80MHz
-ws_i2s_div = 2; // defines I2S-clock of 80MHz
-freq1Bits = 14; // 80 / 14 = 5.714
-freq2Bits = 24; // 80 / 24 = 3.333
+int ws_i2s_bck = 1; // defines I2S-clock of 80MHz
+int ws_i2s_div = 2; // defines I2S-clock of 80MHz
+int freq1Bits = 14; // 80 / 14 = 5.714
+int freq2Bits = 24; // 80 / 24 = 3.333
 
-static struct sdio_queue i2sBufDesc; //I2S DMA buffer descriptor
+struct sdio_queue
+{
+  uint32  blocksize: 12;
+  uint32  datalen: 12;
+  uint32  unused: 5;
+  uint32  sub_sof: 1;
+  uint32  eof: 1;
+  uint32  owner: 1;
 
-static uint32_t i2sBD[I2SDMABUFLEN];
+  uint32  buf_ptr;
+  uint32  next_link_ptr;
+};
+
+
+static struct sdio_queue i2sBufDesc; // I2S DMA buffer descriptor
+
 static int bitFieldSize = 0;
 static int dataLen = 0;
 static int kgv = 0;
 
-int ICACHE_FLASH_ATTR ggt(int m, int n)
+#define I2SDMABUFLEN (100) //Length of one buffer, in 32-bit words.
+static uint32_t i2sBD[I2SDMABUFLEN];
+
+int ggt(int m, int n)
 {
   if (n == 0)
     return m;
@@ -58,14 +74,22 @@ int ICACHE_FLASH_ATTR ggt(int m, int n)
     return ggt(n, m % n);
 }
 
-int ICACHE_FLASH_ATTR calcKgv(int m, int n)
+int calcKgv(int m, int n)
 {
   int o = ggt(m, n);
   int p = (m * n) / o;
   return p;
 }
 
-int ICACHE_FLASH_ATTR setBitPattern()
+void setBit( int bitNr, bool val)
+{
+  if ( val )
+    i2sBD[bitNr >> 5] |= 0x80000000 >> (bitNr % 32);
+  else
+    i2sBD[bitNr >> 5] &= ~(0x80000000 >> (bitNr % 32));
+}
+
+int setBitPattern()
 {
   os_memset( i2sBD, 0x00, sizeof(i2sBD));
   int bitCount = 0;
@@ -88,21 +112,12 @@ int ICACHE_FLASH_ATTR setBitPattern()
   return ( bitCount );
 }
 
-void ICACHE_FLASH_ATTR setBit( int bitNr, bool val)
-{
-  if ( val )
-    i2sBD[bitNr >> 5] |= 0x80000000 >> (bitNr % 32);
-  else
-    i2sBD[bitNr >> 5] &= ~(0x80000000 >> (bitNr % 32));
-}
-
-int ICACHE_FLASH_ATTR getBit( int bitNr)
+int getBit( int bitNr)
 {
   return ( (i2sBD[bitNr >> 5] >> (bitNr % 32)) & 1);
 }
 
-//Initialize I2S subsystem for DMA circular buffer use
-void ICACHE_FLASH_ATTR initI2S()
+void initI2S()
 {
   bitFieldSize = setBitPattern();
   dataLen = (bitFieldSize >> 3); // dataLen (bytes) = bitFieldSize / 8
@@ -155,7 +170,10 @@ void ICACHE_FLASH_ATTR initI2S()
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_I2SO_BCK);
 
   //Enable clock to i2s subsystem
-  i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1);
+
+  ////////////////////////////////////////////// i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1);
+  ////////////////////////////////////////////// 'rom_i2c_writeReg_Mask' was not declared in this scope
+  I2S_CLK_ENABLE(); ////////////////////////// / same error
 
   //Reset I2S subsystem
   CLEAR_PERI_REG_MASK(I2SCONF, I2S_I2S_RESET_MASK);
@@ -176,38 +194,36 @@ void ICACHE_FLASH_ATTR initI2S()
   CLEAR_PERI_REG_MASK(I2SINT_CLR, I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
                       I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
 
-//trans master&rece slave,MSB shift,right_first,msb right
-    CLEAR_PERI_REG_MASK(I2SCONF, I2S_TRANS_SLAVE_MOD|
-                                            (I2S_BITS_MOD<<I2S_BITS_MOD_S)|
-                                            (I2S_BCK_DIV_NUM <<I2S_BCK_DIV_NUM_S)|
-                                            (I2S_CLKM_DIV_NUM<<I2S_CLKM_DIV_NUM_S));
+  //trans master&rece slave,MSB shift,right_first,msb right
+  CLEAR_PERI_REG_MASK(I2SCONF, I2S_TRANS_SLAVE_MOD |
+                      (I2S_BITS_MOD << I2S_BITS_MOD_S) |
+                      (I2S_BCK_DIV_NUM << I2S_BCK_DIV_NUM_S) |
+                      (I2S_CLKM_DIV_NUM << I2S_CLKM_DIV_NUM_S));
 
-    SET_PERI_REG_MASK(I2SCONF, I2S_RIGHT_FIRST|I2S_MSB_RIGHT|I2S_RECE_SLAVE_MOD|
-                                            I2S_RECE_MSB_SHIFT|I2S_TRANS_MSB_SHIFT|
-                                            ((ws_i2s_bck&I2S_BCK_DIV_NUM )<<I2S_BCK_DIV_NUM_S)|
-                                            ((ws_i2s_div&I2S_CLKM_DIV_NUM)<<I2S_CLKM_DIV_NUM_S));
+  SET_PERI_REG_MASK(I2SCONF, I2S_RIGHT_FIRST | I2S_MSB_RIGHT | I2S_RECE_SLAVE_MOD |
+                    I2S_RECE_MSB_SHIFT | I2S_TRANS_MSB_SHIFT |
+                    ((ws_i2s_bck & I2S_BCK_DIV_NUM ) << I2S_BCK_DIV_NUM_S) |
+                    ((ws_i2s_div & I2S_CLKM_DIV_NUM) << I2S_CLKM_DIV_NUM_S));
 
-    //No idea if ints are needed...
-    //clear int
-    SET_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR|I2S_I2S_TX_WFULL_INT_CLR|
-                    I2S_I2S_RX_WFULL_INT_CLR|I2S_I2S_PUT_DATA_INT_CLR|I2S_I2S_TAKE_DATA_INT_CLR);
-    CLEAR_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR|I2S_I2S_TX_WFULL_INT_CLR|
-                    I2S_I2S_RX_WFULL_INT_CLR|I2S_I2S_PUT_DATA_INT_CLR|I2S_I2S_TAKE_DATA_INT_CLR);
-    //enable int
-    //SET_PERI_REG_MASK(I2SINT_ENA,   I2S_I2S_TX_REMPTY_INT_ENA|I2S_I2S_TX_WFULL_INT_ENA|
-    //I2S_I2S_RX_REMPTY_INT_ENA|I2S_I2S_TX_PUT_DATA_INT_ENA|I2S_I2S_RX_TAKE_DATA_INT_ENA);
+  //No idea if ints are needed...
+  //clear int
+  SET_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
+                    I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
+  CLEAR_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
+                      I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
 
-    //Start transmission
-    SET_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  //Start transmission
+  SET_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
 }
 
+void setup()
+{
 
-  void setup() {
-    // put your setup code here, to run once:
+  initI2S();
 
-  }
+}
 
-  void loop() {
-    // put your main code here, to run repeatedly:
+void loop()
+{
 
-  }
+}
