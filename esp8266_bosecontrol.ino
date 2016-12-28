@@ -1,28 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Trying to control BOSE using a 30 cm wire as antenna on the TX pin on a ESP8266 module
 // Adopted from https://github.com/jokrug/espfuchs/blob/master/user/oscillator.c
-// Can we get this to compile on esp8266/Arduino? *** NOT WORKING YET, help welcome ***
+// WORKS FOR ME
 ////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-In file included from hardware/esp8266/esp8266/cores/esp8266/Arduino.h:38:0,
-                 from sketch/TestEspApi.ino.cpp:1:
-/home/me/Desktop/TestEspApi/TestEspApi.ino: In function 'void initI2S()':
-hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:32:134: error: 'rom_i2c_writeReg_Mask' was not declared in this scope
- #define i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)  rom_i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)
-                                                                                                                                      ^
-hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:33:55: note: in expansion of macro 'i2c_writeReg_Mask'
- #define i2c_writeReg_Mask_def(block, reg_add, indata) i2c_writeReg_Mask(block, block##_hostid,  reg_add,  reg_add##_msb,  reg_add##_lsb,  indata)
-                                                       ^
-hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:752:43: note: in expansion of macro 'i2c_writeReg_Mask_def'
- #define I2S_CLK_ENABLE()                  i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1)
-                                           ^
-/home/me/Desktop/TestEspApi/TestEspApi.ino:152:4: note: in expansion of macro 'I2S_CLK_ENABLE'
-    I2S_CLK_ENABLE();
-    ^
-exit status 1
-Error compiling for board WeMos D1 R2 & mini.
-*/
 
 #ifdef ESP8266
 extern "C" {
@@ -30,7 +10,7 @@ extern "C" {
 #include "i2s_reg.h"
 #include "slc_register.h"
 #include "esp8266_peri.h"
-void rom_i2c_writeReg_Mask(int, int, int, int, int, int);
+  void rom_i2c_writeReg_Mask(int, int, int, int, int, int);
 }
 #endif
 
@@ -162,8 +142,6 @@ void initI2S()
   SET_PERI_REG_MASK(SLC_TX_LINK, SLC_TXLINK_START);
   SET_PERI_REG_MASK(SLC_RX_LINK, SLC_RXLINK_START);
 
-  //----
-
   //Init pins to i2s functions
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_I2SO_DATA);
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_I2SO_WS);
@@ -201,44 +179,35 @@ void initI2S()
                     I2S_RECE_MSB_SHIFT | I2S_TRANS_MSB_SHIFT |
                     ((ws_i2s_bck & I2S_BCK_DIV_NUM ) << I2S_BCK_DIV_NUM_S) |
                     ((ws_i2s_div & I2S_CLKM_DIV_NUM) << I2S_CLKM_DIV_NUM_S));
-
-  //No idea if ints are needed...
-  //clear int
-  SET_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
-                    I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
-  CLEAR_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
-                      I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
-
 }
 
 void setup()
 {
-
   initI2S();
-  CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
 
 }
 
-const int raw_NEC2_186_85_1[] = { 9024,-4512,564,-564,564,-1692,564,-564,564,-1692,564,-1692,564,-1692,564,-564,564,-1692,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-38628 };
-
+const int raw_NEC2_186_85_1[] = { 9024, -4512, 564, -564, 564, -1692, 564, -564, 564, -1692, 564, -1692, 564, -1692, 564, -564, 564, -1692, 564, -1692, 564, -564, 564, -1692, 564, -564, 564, -1692, 564, -564, 564, -1692, 564, -564, 564, -1692, 564, -564, 564, -564, 564, -564, 564, -564, 564, -564, 564, -564, 564, -564, 564, -564, 564, -1692, 564, -1692, 564, -1692, 564, -1692, 564, -1692, 564, -1692, 564, -1692, 564, -38628 };
 
 void loop()
 {
 
-   int i, *p;
-    
-for(i=0; i<(&raw_NEC2_186_85_1)[1]-raw_NEC2_186_85_1; i++){
-  if(raw_NEC2_186_85_1[i] > 0) {
-    SET_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
-  } else {
-    CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  int i, *p;
+
+  digitalWrite(LED_BUILTIN, LOW);
+  for (i = 0; i < (&raw_NEC2_186_85_1)[1] - raw_NEC2_186_85_1; i++) {
+    if (raw_NEC2_186_85_1[i] > 0) {
+      SET_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
+    } else {
+      CLEAR_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
+    }
+    delayMicroseconds(abs(raw_NEC2_186_85_1[i]));
   }
-  delay(abs(raw_NEC2_186_85_1[i])/550); 
-  // I cannot seem to be able to make the delay shorter without the signal being lost.
-  // When I change the divisor from 550 to 570 it stops working. It would have to be 1000
-}
+  digitalWrite(LED_BUILTIN, HIGH);
 
   // Wait one second
-  CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  CLEAR_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
   delay(1000);
 }
