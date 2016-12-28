@@ -1,7 +1,28 @@
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Trying to control BOSE using a 30 cm wire as antenna on the TX pin on a ESP8266 module
 // Adopted from https://github.com/jokrug/espfuchs/blob/master/user/oscillator.c
+// Can we get this to compile on esp8266/Arduino? *** NOT WORKING YET, help welcome ***
 ////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+In file included from hardware/esp8266/esp8266/cores/esp8266/Arduino.h:38:0,
+                 from sketch/TestEspApi.ino.cpp:1:
+/home/me/Desktop/TestEspApi/TestEspApi.ino: In function 'void initI2S()':
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:32:134: error: 'rom_i2c_writeReg_Mask' was not declared in this scope
+ #define i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)  rom_i2c_writeReg_Mask(block, host_id, reg_add, Msb, Lsb, indata)
+                                                                                                                                      ^
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:33:55: note: in expansion of macro 'i2c_writeReg_Mask'
+ #define i2c_writeReg_Mask_def(block, reg_add, indata) i2c_writeReg_Mask(block, block##_hostid,  reg_add,  reg_add##_msb,  reg_add##_lsb,  indata)
+                                                       ^
+hardware/esp8266/esp8266/cores/esp8266/esp8266_peri.h:752:43: note: in expansion of macro 'i2c_writeReg_Mask_def'
+ #define I2S_CLK_ENABLE()                  i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1)
+                                           ^
+/home/me/Desktop/TestEspApi/TestEspApi.ino:152:4: note: in expansion of macro 'I2S_CLK_ENABLE'
+    I2S_CLK_ENABLE();
+    ^
+exit status 1
+Error compiling for board WeMos D1 R2 & mini.
+*/
 
 #ifdef ESP8266
 extern "C" {
@@ -149,10 +170,7 @@ void initI2S()
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_I2SO_BCK);
 
   //Enable clock to i2s subsystem
-
-  ////////////////////////////////////////////// i2c_writeReg_Mask_def(i2c_bbpll, i2c_bbpll_en_audio_clock_out, 1);
-  ////////////////////////////////////////////// 'rom_i2c_writeReg_Mask' was not declared in this scope
-  I2S_CLK_ENABLE(); ////////////////////////// / same error
+  I2S_CLK_ENABLE();
 
   //Reset I2S subsystem
   CLEAR_PERI_REG_MASK(I2SCONF, I2S_I2S_RESET_MASK);
@@ -191,18 +209,36 @@ void initI2S()
   CLEAR_PERI_REG_MASK(I2SINT_CLR,   I2S_I2S_TX_REMPTY_INT_CLR | I2S_I2S_TX_WFULL_INT_CLR |
                       I2S_I2S_RX_WFULL_INT_CLR | I2S_I2S_PUT_DATA_INT_CLR | I2S_I2S_TAKE_DATA_INT_CLR);
 
-  //Start transmission
-  SET_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
 }
 
 void setup()
 {
 
   initI2S();
+  CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
 
 }
+
+const int raw_NEC2_186_85_1[] = { 9024,-4512,564,-564,564,-1692,564,-564,564,-1692,564,-1692,564,-1692,564,-564,564,-1692,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-1692,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-564,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-1692,564,-38628 };
+
 
 void loop()
 {
 
+   int i, *p;
+    
+for(i=0; i<(&raw_NEC2_186_85_1)[1]-raw_NEC2_186_85_1; i++){
+  if(raw_NEC2_186_85_1[i] > 0) {
+    SET_PERI_REG_MASK(I2SCONF, I2S_I2S_TX_START);
+  } else {
+    CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  }
+  delay(abs(raw_NEC2_186_85_1[i])/550); 
+  // I cannot seem to be able to make the delay shorter without the signal being lost.
+  // When I change the divisor from 550 to 570 it stops working. It would have to be 1000
+}
+
+  // Wait one second
+  CLEAR_PERI_REG_MASK(I2SCONF,I2S_I2S_TX_START);
+  delay(1000);
 }
