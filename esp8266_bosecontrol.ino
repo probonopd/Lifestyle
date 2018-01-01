@@ -18,13 +18,12 @@ extern "C" {
 #endif
 
 // https://github.com/jokrug/espfuchs/issues/1
-// Among a lot of harmonics, you will get 5.714+3.333=9.047MHz
-// The third harmonic is (almost) the desired 27.141MHz.
-// The amplitude of this frequency however, will be much lower than the 9.047 and the 5.714. Maybe it is still strong enough. It's worth a test.
 int ws_i2s_bck = 1; // defines I2S-clock of 80MHz
 int ws_i2s_div = 2; // defines I2S-clock of 80MHz
-int freq1Bits = 14; // 80 / 14 = 5.714
-int freq2Bits = 24; // 80 / 24 = 3.333
+int freq1Bits = 3;     // 80 / 3   = 26.666
+int freq2Bits = 168;   // 80 / 168 =  0.476
+                       // 26.666 + 0.476 = 27.142 (almost the desired 27.141MHz)
+                       // Thanks https://github.com/jkellerer
 
 struct sdio_queue
 {
