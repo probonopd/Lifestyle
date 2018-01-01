@@ -1,4 +1,8 @@
-# Controlling 27.145 MHz BOSE Lifestyle with Raspberry Pi
+# 27.145 MHz BOSE Lifestyle
+
+Controlling 27.145 MHz BOSE Lifestyle with __ESP8266__ and __Raspberry Pi__
+
+## User story
 
 I want to tie my BOSE Lifestyle system into my smart home control setup like this:
 
@@ -7,6 +11,8 @@ I want to tie my BOSE Lifestyle system into my smart home control setup like thi
 The Remote Control RC9 for BOSE Lifestyle 3, 5, 8, 12 systems is using radio rather than infrared. Also, since these systems do not have other ways to control them, it is difficult to integrate them into home automation setups. Also, there are no replacement remotes available and even worn-down used original remotes go for absurd prices on eBay.
 
 This is why I was curious how these devices could be controlled using the apparently proprietary radio signals.
+
+## Research
 
 From the manual, I knew that the device was using 27.145 MHz for the remote control. So I started by investigating the FCC database, searching for the manufacturer BOSE and the frequency 27.145 MHz. I did not find my exact model but others that suggested that BOSE was using 27.145 MHz pulses with on-off keying (OOK). According to Wikipedia, OOK denotes the simplest form of amplitude-shift keying (ASK) modulation that represents digital data at the presence or absence of a carrier wave. Some of the documents in the FCC database show sample pulse trains.
 
