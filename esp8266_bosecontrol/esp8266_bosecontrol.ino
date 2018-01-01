@@ -1,10 +1,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////////
-// Trying to control BOSE using a 30 cm wire as antenna on the TX pin on a ESP8266 module
+// Control 27.145 MHz BOSE Lifestyle music center using a ESP8266 module
+//
 // Adopted from https://github.com/jokrug/espfuchs/blob/master/user/oscillator.c
-// WORKS FOR ME
+//
 // CAUTION: Due to the lack of hardware frequency filters, many frequencies (harmonics)
 // are generated. Check whether you are legally allowed to operate this sketch in your region.
 // This is your own responsibility.
+//
+// A 30 cm long wire as an antenna is connected to pin RX 
+// and needs to be placed not too far from the music center
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef ESP8266
