@@ -16,7 +16,7 @@ This is why I was curious how these devices could be controlled using the appare
 
 From the manual, I knew that the device was using 27.145 MHz for the remote control. So I started by investigating the FCC database, searching for the manufacturer BOSE and the frequency 27.145 MHz. I did not find my exact model but others that suggested that BOSE was using 27.145 MHz pulses with on-off keying (OOK). According to Wikipedia, OOK denotes the simplest form of amplitude-shift keying (ASK) modulation that represents digital data at the presence or absence of a carrier wave. Some of the documents in the FCC database show sample pulse trains.
 
-## Teardown of original remote
+### Teardown of original remote
 
 ![rc9](https://cloud.githubusercontent.com/assets/2480569/21288808/e0188b60-c48c-11e6-96ac-b2933d63d2a1.jpg)
 ![raltron](https://cloud.githubusercontent.com/assets/2480569/21288809/e237bf4c-c48c-11e6-9115-039306378108.jpg)
@@ -26,7 +26,7 @@ From the manual, I knew that the device was using 27.145 MHz for the remote cont
  * Ceramic Resonator is __CSB 455J__ (430-519 kHz according to data sheet; needed by the NEC D6121G)
  * Crystal is __RALTRON 27.145-30 02 CYH 04__
 
-## Measured with Saleae Logic on D6121G pin 7 = REM
+### Measured with Saleae Logic on D6121G pin 7 = REM
 
 On pin 7 = REM, there is for the ON/OFF key an infrared-like signal modulated with 38 kHz and 33% duty cycle (yellow channel 4 below). The same signal but _not_ modulated with 38 kHz can be seen at L2 near the transmitting antenna (orange channel 3 below).
 
@@ -141,7 +141,7 @@ NEXT DISC: NEC2 Device: 186.85 Function: 93 S=85
 MUTE ALL: NEC2 Device: 186.85 Function: 223 S=85
 ```
 
-## Analyzing these signals on the air
+### Analyzing these signals on the air
 
 Analyzing the signal timing on the original remote is possible using a Saleae Logic Analyzer as shown above. But once I had built my own sender, I wanted to measure the signal on the air. In hindsight, it would not have been necessary to open the original remote, but I was curious what was inside anyway.
 
@@ -309,7 +309,7 @@ This is the contents of mute.json, which is a representation of the MUTE timings
 
 To make things simpler, I wrote the `bosecontrol.c` code below which __works for me__ when the Raspberry Pi 1 is running at its normal 700 MHz frequency. Underclocking it results in the code not working. Using something like DMA rather than the CPU to do the switching would be much better (can you do it?).
 
-## Ideas for further investigation
+### Ideas for further investigation
 
 Being able to control a 27.145 MHz BOSE Lifestyle system with a Raspberry Pi may be a great proof-of-concept, but is not very practical for productive use (i.e., to be hidden permanently beyond the audio system as an additional way to control it):
 
@@ -321,7 +321,7 @@ Being able to control a 27.145 MHz BOSE Lifestyle system with a Raspberry Pi may
  
 Hence, I am looking for a different solution.
 
-### Generating these signals with Arudino
+## Generating these signals with Arudino
 
 Might be possible with a __AD9850__ module
 http://blog.riyas.org/2014/06/computer-controlling-27mhz-remote-control-car-ad9850-dds.html
@@ -356,20 +356,13 @@ Seems to be relatively [complex](http://www.edaboard.com/thread307034.html). Coi
 
 I searched eBay for ready-to-use modules, but unlike for 433 MHz, readymade modules for this frequency seem not to exist. Why is this?
 
-### Generating these signals with ESP8266
+## Generating these signals with ESP8266
 
 __It works__ with something along the lines of https://github.com/cnlohr/channel3, with [esp8266/Arduino](https://github.com/esp8266/Arduino) that lets us use the familiar Arduino toolset. Sketch below.
 
 Someone is doing something very similar but for 433 MHz at https://github.com/papadeltasierra/dma433
 
 However, it generates many other frequencies as well, so this is not a clean solution. The sender with a 30 cm long wire as an antenna on pin RX needs to be placed not too far from the music center.
-
-### Other ways to generate the signal on the cheap
-
- * Buy a garage door opener sender and try to attach it to an Arudino to replay the BOSE signals?
- * ...
- 
-Let me know if you are trying some of these or have other ideas.
 
 ## Other investigations into the system
 
