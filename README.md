@@ -40,7 +40,7 @@ Zoom in a bit to see the difference between the signal modulated with 38 kHz and
 
 Wait, these signals look familiar. This is a variant of the well-known NEC infrared protocol that is used by many infrared-controlled devices. In fact, the signal above is `protocol = NEC2, device = 186, subdevice = 85, obc = 76`. But instead of sending the signals using a 940 nm infrared LED pulsating at 38 kHz, they are using an antenna pulsating at 27.145 MHz for the periods marked with "+" below. I used the awesome [IrScrutinizer](http://www.harctoolbox.org/IrScrutinizer.html) tool to verify my hypothesis by generating some NEC codes. Then I checked the irdb infrared database, one of the largest crowd-sourced, manufacturer-independent databases of infrared remote control codes on the web. And indeed, I found [this set of BOSE codes](https://github.com/probonopd/irdb/blob/master/codes/Bose/Lifestyle/186%2C85.csv). Using [IrScrutinizer](http://www.harctoolbox.org/IrScrutinizer.html), it was easy to calculate the "clean" (calculated rather than measured) codes for all BOSE commands.
 
-Hence I assume that these are the valid signals in nanoseconds, with "+" being "27.145 MHz on", and "-" = off:
+Hence I assume that these are the valid signals in microseconds, with "+" being "27.145 MHz on", and "-" = off:
 
 ```
 MUTE
