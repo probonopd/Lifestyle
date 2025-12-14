@@ -2,6 +2,8 @@
 
 Controlling 27.145 MHz BOSE Lifestyle with __ESP8266__ and __Raspberry Pi__
 
+__NOTE:__ There is a product recall for Bose Acoustimass modules. See [here](https://global.bose.com/en_us/bm_safety_contact_en.html) ([DE](https://www.bose.de/de_de/support/bm_safety_service.html)) for details.
+
 ## User story
 
 I want to tie my BOSE Lifestyle system into my smart home control setup like this:
